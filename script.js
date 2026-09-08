@@ -19,6 +19,11 @@ const usageKey = 'motionflow_usage';
 const userKey = 'motionflow_user';
 const accountsKey = 'motionflow_accounts';
 
+// ✅ BACKEND URL - UPDATE THIS WITH YOUR VERCEL DEPLOYMENT
+const BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://localhost:3000'
+  : 'https://markimods-backend.vercel.app'; // CHANGE THIS TO YOUR VERCEL URL
+
 function getTodayKey() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -320,9 +325,8 @@ async function generateVideo() {
     const durationInput = document.getElementById('videoDuration');
     const duration = durationInput ? Number(durationInput.value) : 10;
 
-    const endpoint = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-      ? 'http://localhost:3000/api/generate'
-      : '/api/generate';
+    // ✅ USE BACKEND URL
+    const endpoint = `${BACKEND_URL}/api/generate`;
 
     console.log('[Generate] Sending request to:', endpoint);
 
@@ -385,9 +389,8 @@ async function uploadPhotoToServer(file, allowNSFW = false) {
   form.append('allow_nsfw', allowNSFW ? '1' : '0');
   form.append('prompt', 'Smooth animation and elegant motion');
 
-  const endpoint = (window.location.hostname === 'localhost')
-    ? 'http://localhost:3000/api/photo-to-video'
-    : '/api/photo-to-video';
+  // ✅ USE BACKEND URL
+  const endpoint = `${BACKEND_URL}/api/photo-to-video`;
 
   const resp = await fetch(endpoint, {
     method: 'POST',
@@ -686,5 +689,5 @@ if (contactForm) {
   });
 }
 
-console.log('[Init] MotionFlow AI loaded');
+console.log('[Init] th3dr4k3r.ia - Backend URL:', BACKEND_URL);
 updateAuthUI();
