@@ -19,10 +19,10 @@ const usageKey = 'motionflow_usage';
 const userKey = 'motionflow_user';
 const accountsKey = 'motionflow_accounts';
 
-// ✅ BACKEND URL - UPDATE THIS WITH YOUR VERCEL DEPLOYMENT
+// ✅ BACKEND URL - Ahora apunta a tu backend en Vercel
 const BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
   ? 'http://localhost:3000'
-  : 'https://markimods-backend.vercel.app'; // CHANGE THIS TO YOUR VERCEL URL
+  : 'https://markimods-backend.vercel.app';
 
 function getTodayKey() {
   return new Date().toISOString().slice(0, 10);
