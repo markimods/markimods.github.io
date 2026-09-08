@@ -1,0 +1,10 @@
+node_modules/
+.env
+.DS_Store
+public/videos/*
+!public/videos/.gitkeep
+*.log
+dist/
+build/
+.env.local
+.env.*.local
