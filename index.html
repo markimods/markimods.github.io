@@ -1,1 +1,50 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>PS4 13.02 WebKit Research</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main class="wrap">
+    <header>
+      <div class="eyebrow">PS4 / WEBKIT RESEARCH</div>
+      <h1>13.02 WebKit Host</h1>
+      <p class="muted">Static GitHub Pages research interface — no kernel exploit included.</p>
+    </header>
 
+    <section class="grid">
+      <article class="card">
+        <h2>Environment</h2>
+        <div class="row"><span>Target</span><strong>PlayStation 4</strong></div>
+        <div class="row"><span>Firmware</span><strong id="firmware">13.02</strong></div>
+        <div class="row"><span>Browser</span><strong id="browser">Detecting…</strong></div>
+        <div class="row"><span>Mode</span><strong id="mode">WebKit / userland research</strong></div>
+      </article>
+
+      <article class="card">
+        <h2>Controls</h2>
+        <button id="testBtn">Run WebKit test</button>
+        <button id="clearBtn" class="secondary">Clear console</button>
+        <p class="hint">These buttons only test the page/runtime. They do not jailbreak the console.</p>
+      </article>
+    </section>
+
+    <section class="card">
+      <div class="console-head">
+        <h2>Console</h2>
+        <span id="status" class="status">READY</span>
+      </div>
+      <pre id="console" aria-live="polite"></pre>
+    </section>
+
+    <footer>
+      <a href="https://github.com/" rel="noopener">GitHub</a>
+      <span>·</span>
+      <span>Research scaffold</span>
+    </footer>
+  </main>
+  <script src="js/main.js"></script>
+</body>
+</html>
