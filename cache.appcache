@@ -1,0 +1,22 @@
+CACHE MANIFEST
+# build H4SS9M BASE-mansoor0x-v6
+
+index.html
+poops.html
+chain_poops.js
+core.js
+mem.js
+int64.js
+ps4_offsets.js
+rpc_worker.js
+payload.bin
+patches/1300.bin
+patches/1302.bin
+patches/1304.bin
+
+NETWORK:
+*
+
+FALLBACK:
+index.html index.html
+poops.html poops.html

@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en" manifest="cache.appcache">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>H4SS9M · Poops run</title>
+<style>
+  :root {
+    --bg: #06070a;
+    --line: rgba(255,255,255,.07);
+    --accent: #7c5cff;
+    --accent2: #22d3ee;
+    --text: #eaeaf0;
+    --muted: #8a90a3;
+    --ok: #34d399; --warn: #fbbf24; --bad: #f87171;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: var(--bg); color: var(--text);
+    font: 13px/1.45 "Segoe UI", system-ui, sans-serif;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  header {
+    flex: 0 0 auto; display: flex; align-items: center; gap: 14px;
+    padding: 10px 18px; border-bottom: 1px solid var(--line);
+    background: #0a0c12;
+  }
+  .brand { font-size: 12px; font-weight: 800; letter-spacing: .24em;
+           text-transform: uppercase; color: var(--accent); }
+  .sep   { width: 1px; height: 18px; background: var(--line); }
+  #state { font-size: 12px; color: var(--warn); letter-spacing: .06em; text-transform: lowercase; }
+  #tid   { font-size: 11px; color: var(--muted); margin-left: auto;
+           letter-spacing: .1em; text-transform: uppercase; }
+  #tg    { font-size: 11px; color: var(--muted); letter-spacing: .08em; }
+  #tg.on { color: var(--ok); }
+  #tg.err { color: var(--bad); }
+  main   { flex: 1 1 auto; overflow: hidden; }
+  pre#out {
+    margin: 0; padding: 16px 20px; height: 100%; overflow: auto;
+    font: 12.5px/1.45 "Consolas", "SF Mono", ui-monospace, monospace;
+    white-space: pre-wrap; word-break: break-word; background: #06070a;
+  }
+  pre#out span.ok   { color: var(--ok); }
+  pre#out span.warn { color: var(--warn); }
+  pre#out span.bad  { color: var(--bad); }
+  footer {
+    flex: 0 0 auto; display: flex; gap: 8px; padding: 8px 18px;
+    border-top: 1px solid var(--line); background: #0a0c12;
+    font-size: 11px; color: var(--muted); letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+  footer button {
+    background: transparent; border: 1px solid var(--line);
+    color: var(--text); padding: 6px 12px; border-radius: 6px;
+    font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+    cursor: pointer;
+  }
+  footer button:hover { border-color: var(--accent); color: var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">H4SS9M</div>
+  <div class="sep"></div>
+  <div id="state">booting…</div>
+  <div id="tid">tester: —</div>
+  <div id="tg">tg: —</div>
+</header>
+
+<main><pre id="out"></pre></main>
+
+<footer>
+  <button id="btn-send">send now</button>
+  <button id="btn-clear">clear</button>
+  <span style="margin-left:auto">poops chain · 13.02 / 13.04</span>
+</footer>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════
+//  CONFIG
+// ══════════════════════════════════════════════════════════════════════
+// Proxy (Cloudflare Worker). Vacío = no se envía nada.
+// Cuando montes el worker, pon aquí la URL completa, por ejemplo:
+//   var PROXY_URL = "https://h4ss9m-log.TU-SUBDOMINIO.workers.dev/log";
+var PROXY_URL   = "";
+
+// Fallback directo (obsoleto, solo por si no quieres usar proxy todavía).
+// Si PROXY_URL está vacío y estos tienen valores, se usarán directamente.
+var TG_TOKEN    = "";
+var TG_CHAT     = "";
+var DC_WEBHOOK  = "";
+
+var PROXY_ENABLED = PROXY_URL.indexOf("http") === 0;
+var TG_ENABLED    = !PROXY_ENABLED && TG_TOKEN.length > 20 && TG_CHAT.length > 3;
+var DC_ENABLED    = !PROXY_ENABLED && DC_WEBHOOK.indexOf("http") === 0;
+
+// ══════════════════════════════════════════════════════════════════════
+//  ESTADO
+// ══════════════════════════════════════════════════════════════════════
+var params     = new URLSearchParams(location.search);
+var testerId   = (params.get("id") || "UNK").toUpperCase();
+var testerNote = params.get("note") || "";
+
+var outEl   = document.getElementById("out");
+var stateEl = document.getElementById("state");
+var tidEl   = document.getElementById("tid");
+var tgEl    = document.getElementById("tg");
+
+tidEl.textContent = "tester: " + testerId + (testerNote ? " (" + testerNote + ")" : "");
+
+// Mostrar estado del transporte
+(function showTransport() {
+  if (PROXY_ENABLED) {
+    tgEl.textContent = "proxy:on";
+    tgEl.className = "on";
+  } else if (TG_ENABLED || DC_ENABLED) {
+    tgEl.textContent = "tg:" + (TG_ENABLED ? "on" : "off")
+                     + " dc:" + (DC_ENABLED ? "on" : "off");
+    tgEl.className = "on";
+  } else {
+    tgEl.textContent = "tg:off dc:off";
+  }
+})();
+
+// ══════════════════════════════════════════════════════════════════════
+//  FORWARDERS DIRECTOS (fallback si no hay proxy)
+// ══════════════════════════════════════════════════════════════════════
+var tgQueue = [], tgSending = false;
+var dcQueue = [], dcSending = false;
+
+function tgPush(text) {
+  if (!TG_ENABLED) return;
+  var MAX = 3500;
+  for (var i = 0; i < text.length; i += MAX) tgQueue.push(text.slice(i, i + MAX));
+  tgFlush();
+}
+
+function tgFlush() {
+  if (!TG_ENABLED || tgSending || !tgQueue.length) return;
+  tgSending = true;
+  var chunk = tgQueue.shift();
+  try {
+    var x = new XMLHttpRequest();
+    x.open("POST", "https://api.telegram.org/bot" + TG_TOKEN + "/sendMessage", true);
+    x.setRequestHeader("Content-Type", "application/json");
+    x.onreadystatechange = function () {
+      if (x.readyState !== 4) return;
+      var ok = (x.status === 200);
+      if (!ok) {
+        if (x.status === 429) {
+          tgQueue.unshift(chunk);
+          tgSending = false;
+          setTimeout(tgFlush, 8000);
+          return;
+        }
+        if (x.status >= 400 && x.status < 500) {
+          tgSending = false;
+          setTimeout(tgFlush, 1100);
+          return;
+        }
+      }
+      tgSending = false;
+      setTimeout(tgFlush, 1500);
+    };
+    x.send(JSON.stringify({
+      chat_id: TG_CHAT,
+      text: chunk,
+      disable_web_page_preview: true
+    }));
+  } catch (e) {
+    tgSending = false;
+    setTimeout(tgFlush, 3000);
+  }
+}
+
+function dcPush(text) {
+  if (!DC_ENABLED) return;
+  var MAX = 1900;
+  for (var i = 0; i < text.length; i += MAX) dcQueue.push(text.slice(i, i + MAX));
+  dcFlush();
+}
+
+function dcFlush() {
+  if (!DC_ENABLED || dcSending || !dcQueue.length) return;
+  dcSending = true;
+  var chunk = dcQueue.shift();
+  try {
+    var x = new XMLHttpRequest();
+    x.open("POST", DC_WEBHOOK, true);
+    x.setRequestHeader("Content-Type", "application/json");
+    x.onreadystatechange = function () {
+      if (x.readyState !== 4) return;
+      dcSending = false;
+      setTimeout(dcFlush, 800);
+    };
+    x.send(JSON.stringify({ content: chunk }));
+  } catch (e) { dcSending = false; }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  PROXY (preferido cuando está configurado)
+// ══════════════════════════════════════════════════════════════════════
+function proxySend(reason, fullLog) {
+  var x = new XMLHttpRequest();
+  x.open("POST", PROXY_URL, true);
+  x.setRequestHeader("Content-Type", "application/json");
+  x.onreadystatechange = function () {
+    if (x.readyState !== 4) return;
+    if (x.status === 200) {
+      try {
+        var r = JSON.parse(x.responseText);
+        if (r && r.ip_hash) {
+          tgEl.textContent = "proxy:on id:" + r.ip_hash.slice(0, 8);
+        }
+        stateEl.textContent = "dump enviado";
+      } catch (e) {
+        stateEl.textContent = "dump enviado";
+      }
+    } else if (x.status === 429) {
+      stateEl.textContent = "rate limited — espera 1 min";
+    } else {
+      stateEl.textContent = "dump falló (" + x.status + ")";
+    }
+  };
+  x.send(JSON.stringify({
+    test:   testerId,
+    note:   testerNote,
+    reason: reason,
+    log:    fullLog
+  }));
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  DUMP COMPLETO — única forma de enviar
+// ══════════════════════════════════════════════════════════════════════
+function prettyUA(ua) {
+    const m = /PlayStation\s+([45])[\/ ](\d+)\.(\d+)/.exec(ua || "");
+    if (!m) return String(ua || "").slice(0, 60);
+    const engine = /WebKit\/(\d+)/.exec(ua);
+    return "PS" + m[1] + "-" + m[2] + "." + m[3]
+         + (engine ? " wk" + engine[1] : "");
+}
+
+function buildFullDump(reason) {
+  var log = (window.__poopsLog && window.__poopsLog.length)
+    ? window.__poopsLog.join("\n")
+    : (outEl.textContent || "");
+  return "== " + reason + " · " + testerId
+       + (testerNote ? " (" + testerNote + ")" : "") + " ==\n"
+       + "UA:      " + prettyUA(navigator.userAgent) + "\n"
+       + "URL: "  + location.href + "\n"
+       + "TIME: " + new Date().toISOString() + "\n"
+       + "LINES: " + (window.__poopsLog ? window.__poopsLog.length : 0) + "\n\n"
+       + log;
+}
+
+function sendFullDump(reason) {
+  var full = buildFullDump(reason);
+  if (PROXY_ENABLED) {
+    proxySend(reason, full);
+  } else {
+    tgPush(full);
+    dcPush(full);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  OBSERVADOR DEL LOG — solo actualiza el header, NO reenvía nada
+// ══════════════════════════════════════════════════════════════════════
+var lastText = "";
+function updateState() {
+  var cur = outEl.textContent || "";
+  if (cur.length <= lastText.length) return;
+  var delta = cur.slice(lastText.length);
+  lastText = cur;
+  var newLines = delta.split("\n").filter(function (l) { return l.trim(); });
+  if (newLines.length) {
+    var last = newLines[newLines.length - 1].trim();
+    if (last.length < 120) stateEl.textContent = last.toLowerCase();
+  }
+}
+setInterval(updateState, 400);
+if (window.MutationObserver) {
+  new MutationObserver(updateState).observe(outEl, {
+    childList: true, characterData: true, subtree: true
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  BOTONES
+// ══════════════════════════════════════════════════════════════════════
+document.getElementById("btn-clear").addEventListener("click", function () {
+  outEl.textContent = "";
+  lastText = "";
+  // NO borramos window.__poopsLog para no perder el histórico
+});
+
+document.getElementById("btn-send").addEventListener("click", function () {
+  sendFullDump("MANUAL DUMP");
+});
+
+// Enviar todo al cerrar
+window.addEventListener("beforeunload", function () {
+  sendFullDump("FINAL");
+});
+
+// ══════════════════════════════════════════════════════════════════════
+//  ARRANQUE DEL EXPLOIT
+// ══════════════════════════════════════════════════════════════════════
+console.log("[H4SS9M] Configuración: PROXY=" + PROXY_ENABLED
+    + " TG=" + TG_ENABLED + " DC=" + DC_ENABLED);
+</script>
+
+<!-- El exploit -->
+<script type="module" src="./chain_poops.js"></script>
+</body>
+</html>
