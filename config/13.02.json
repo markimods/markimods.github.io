@@ -1,0 +1,7 @@
+{
+  "firmware": "13.02",
+  "mode": "userland-research",
+  "kernelExploit": false,
+  "payloadLoading": false,
+  "notes": "Placeholder profile. Add only verified, reproducible research data."
+}
