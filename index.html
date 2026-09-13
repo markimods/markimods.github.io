@@ -1,50 +1,138 @@
-<!doctype html>
-<html lang="es">
+<!DOCTYPE html>
+<html lang="en" manifest="cache.appcache">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>PS4 13.02 WebKit Research</title>
-  <link rel="stylesheet" href="css/style.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>markimods · Poops 13.02/13.04</title>
+<style>
+  :root {
+    --bg: #06070a;
+    --card: #0d0f14;
+    --line: rgba(255,255,255,.07);
+    --accent: #7c5cff;
+    --accent2: #22d3ee;
+    --text: #eaeaf0;
+    --muted: #8a90a3;
+    --ok: #34d399;
+    --warn: #fbbf24;
+    --bad: #f87171;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; min-height: 100vh;
+    background: radial-gradient(1200px 800px at 50% -10%, rgba(124,92,255,.18), transparent 60%), var(--bg);
+    color: var(--text);
+    font: 15px/1.5 "Segoe UI", system-ui, -apple-system, sans-serif;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #card {
+    width: 100%; max-width: 460px; margin: 24px; padding: 28px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    box-shadow: 0 24px 48px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.02) inset;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 12px;
+    font-size: 12px; font-weight: 800; letter-spacing: .28em;
+    text-transform: uppercase; color: var(--accent);
+    margin-bottom: 22px;
+  }
+  .brand::after {
+    content: ''; flex: 1; height: 1px;
+    background: linear-gradient(90deg, var(--line), transparent);
+  }
+  h1 { margin: 0 0 6px; font-size: 22px; letter-spacing: -.02em; }
+  p.sub { margin: 0 0 22px; font-size: 13px; color: var(--muted); }
+  .row { display: flex; gap: 10px; margin-bottom: 10px; }
+  .row label {
+    flex: 0 0 90px; font-size: 12px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .1em; padding-top: 8px;
+  }
+  .row input {
+    flex: 1; background: #06070a; border: 1px solid var(--line);
+    color: var(--text); padding: 8px 10px; border-radius: 8px;
+    font: 13px/1.2 "Consolas", monospace;
+  }
+  .row input:focus { outline: 1px solid var(--accent); }
+  button {
+    width: 100%; padding: 14px; margin-top: 14px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border: 0; border-radius: 10px; color: #06070a;
+    font-weight: 800; letter-spacing: .06em; cursor: pointer;
+    text-transform: uppercase;
+  }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  #info {
+    margin-top: 18px; padding: 12px 14px; border-radius: 10px;
+    background: rgba(0,0,0,.3); border: 1px solid var(--line);
+    font: 12px/1.5 "Consolas", monospace; color: var(--muted);
+    white-space: pre-wrap;
+  }
+  .ok { color: var(--ok); } .warn { color: var(--warn); } .bad { color: var(--bad); }
+  footer {
+    margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line);
+    font-size: 11px; color: var(--muted); text-align: center;
+    letter-spacing: .1em; text-transform: uppercase;
+  }
+</style>
 </head>
 <body>
-  <main class="wrap">
-    <header>
-      <div class="eyebrow">PS4 / WEBKIT RESEARCH</div>
-      <h1>13.02 WebKit Host</h1>
-      <p class="muted">Static GitHub Pages research interface — no kernel exploit included.</p>
-    </header>
+<div id="card">
+  <div class="brand">markimods</div>
+  <h1>Poops chain</h1>
 
-    <section class="grid">
-      <article class="card">
-        <h2>Environment</h2>
-        <div class="row"><span>Target</span><strong>PlayStation 4</strong></div>
-        <div class="row"><span>Firmware</span><strong id="firmware">13.02</strong></div>
-        <div class="row"><span>Browser</span><strong id="browser">Detecting…</strong></div>
-        <div class="row"><span>Mode</span><strong id="mode">WebKit / userland research</strong></div>
-      </article>
 
-      <article class="card">
-        <h2>Controls</h2>
-        <button id="testBtn">Run WebKit test</button>
-        <button id="clearBtn" class="secondary">Clear console</button>
-        <p class="hint">These buttons only test the page/runtime. They do not jailbreak the console.</p>
-      </article>
-    </section>
+  <button id="go">continue</button>
+  <div id="info">detecting firmware…</div>
 
-    <section class="card">
-      <div class="console-head">
-        <h2>Console</h2>
-        <span id="status" class="status">READY</span>
-      </div>
-      <pre id="console" aria-live="polite"></pre>
-    </section>
+  <footer>developed by markimods</footer>
+</div>
 
-    <footer>
-      <a href="https://github.com/" rel="noopener">GitHub</a>
-      <span>·</span>
-      <span>Research scaffold</span>
-    </footer>
-  </main>
-  <script src="js/main.js"></script>
+<script>
+(function () {
+  var params = new URLSearchParams(location.search);
+  var info = document.getElementById("info");
+  var tid = document.getElementById("tid");
+  var note = document.getElementById("note");
+  var go = document.getElementById("go");
+
+  // Restore previous tester id
+  try {
+    var saved = localStorage.getItem("h4ss9m_tester");
+    if (saved) tid.value = saved;
+  } catch (e) {}
+  if (params.get("id")) tid.value = params.get("id");
+
+  // Firmware detection
+  var key = null, fwnum = null;
+  var m = /PlayStation\s+4[\/ ](\d+)\.(\d+)/.exec(navigator.userAgent);
+  if (m) {
+    var minor = parseInt(m[2], 16);
+    key = m[1] + "." + (minor < 16 ? "0" : "") + minor.toString(16);
+    fwnum = parseInt(m[1], 10) * 100 + minor;
+  }
+
+  var bug = null, reason = "";
+  if (!key) reason = "not a PS4 user-agent";
+  else if (fwnum === 1302 || fwnum === 1304) { bug = "poops"; reason = key + " → poops"; }
+  else reason = key + " → unsupported (only 13.02/13.04)";
+
+  info.innerHTML =
+    "firmware: <b>" + (key || "unknown") + "</b>\n" +
+    "chain:    <b>" + (bug || "none") + "</b>\n" +
+    "reason:   " + reason;
+  info.className = bug ? "ok" : "bad";
+
+  go.disabled = !bug;
+  go.addEventListener("click", function () {
+    var id = tid.value.trim() || "UNK";
+    try { localStorage.setItem("h4ss9m_tester", id); } catch (e) {}
+    var qs = "?pair=1&id=" + encodeURIComponent(id);
+    if (note.value.trim()) qs += "&note=" + encodeURIComponent(note.value.trim());
+    location.replace("poops.html" + qs);
+  });
+})();
+</script>
 </body>
 </html>
